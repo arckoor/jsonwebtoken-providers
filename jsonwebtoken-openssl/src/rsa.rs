@@ -5,6 +5,7 @@ use jsonwebtoken::{
     signature::{Error, Signer, Verifier},
 };
 use openssl::{
+    bn::BigNum,
     hash::MessageDigest,
     pkey::{PKey, Private, Public},
     rsa::{Padding, Rsa},
@@ -57,11 +58,22 @@ macro_rules! define_rsa_verifier {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
 
-                let rsa_key = Rsa::public_key_from_der_pkcs1(decoding_key.as_bytes())
-                    .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
-                let k = PKey::from_rsa(rsa_key).map_err(Error::from_source)?;
+                let rsa_key = match decoding_key.kind() {
+                    jsonwebtoken::DecodingKeyKind::SecretOrDer(items) => {
+                        Rsa::public_key_from_der_pkcs1(items)
+                    }
+                    jsonwebtoken::DecodingKeyKind::RsaModulusExponent { n, e } => {
+                        Rsa::from_public_components(
+                            BigNum::from_slice(n)
+                                .map_err(|e| ErrorKind::Provider(e.to_string()))?,
+                            BigNum::from_slice(e)
+                                .map_err(|e| ErrorKind::Provider(e.to_string()))?,
+                        )
+                    }
+                }
+                .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
 
-                Ok(Self(k))
+                Ok(Self(PKey::from_rsa(rsa_key).map_err(Error::from_source)?))
             }
         }
 
@@ -143,7 +155,6 @@ define_rsa_verifier!(
     MessageDigest::sha512(),
     Padding::PKCS1
 );
-
 define_rsa_verifier!(
     RsaPss256Verifier,
     Algorithm::PS256,

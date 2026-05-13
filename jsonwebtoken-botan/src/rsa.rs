@@ -52,11 +52,11 @@ macro_rules! define_rsa_verifier {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
 
-                let pubkey = match &decoding_key.kind() {
-                    DecodingKeyKind::SecretOrDer(items) => Pubkey::load_rsa_pkcs1(&items),
+                let pubkey = match decoding_key.kind() {
+                    DecodingKeyKind::SecretOrDer(items) => Pubkey::load_rsa_pkcs1(items),
                     DecodingKeyKind::RsaModulusExponent { n, e } => Pubkey::load_rsa(
-                        &MPI::new_from_bytes(&n).map_err(|e| ErrorKind::Provider(e.to_string()))?,
-                        &MPI::new_from_bytes(&e).map_err(|e| ErrorKind::Provider(e.to_string()))?,
+                        &MPI::new_from_bytes(n).map_err(|e| ErrorKind::Provider(e.to_string()))?,
+                        &MPI::new_from_bytes(e).map_err(|e| ErrorKind::Provider(e.to_string()))?,
                     ),
                 }
                 .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
@@ -71,7 +71,7 @@ macro_rules! define_rsa_verifier {
                     botan::Verifier::new(&self.0, $padding).map_err(Error::from_source)?;
                 verifier.update(msg).map_err(Error::from_source)?;
                 verifier
-                    .finish(&signature)
+                    .finish(signature)
                     .map_err(Error::from_source)?
                     .then_some(())
                     .ok_or(Error::new())

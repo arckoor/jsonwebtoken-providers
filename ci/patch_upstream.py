@@ -1,9 +1,10 @@
 from pathlib import Path
 import subprocess
 import os
-import json
 import textwrap
 import argparse
+
+from find_version import get_package_version
 
 
 UPSTREAM = Path("upstream").resolve()
@@ -11,24 +12,12 @@ PROVIDERS = Path("providers").resolve()
 
 
 def cargo_add(*args, cwd):
+    print(f"Adding {' '.join(args)}")
     subprocess.run(
         ["cargo", "add", *args],
         cwd=cwd,
         check=True,
     )
-
-
-def get_package_version(package: str, cwd) -> str:
-    print("Getting package version from provider")
-    cmd = ["cargo", "metadata", "--format-version", "1"]
-    data = subprocess.check_output(cmd, cwd=cwd)
-    metadata = json.loads(data)
-
-    for pkg in metadata["packages"]:
-        if pkg["name"] == package:
-            return f"{package}@{pkg['version']}"
-
-    raise ValueError(f"Package {package} not found")
 
 
 def patch_crate_usage(file: Path):
@@ -86,8 +75,8 @@ def main(package: str, crate: str):
         patch_crate_usage(UPSTREAM / "src" / "crypto" / "provider" / file)
     patch_provider_mod()
     patch_crypto_mod()
-    package_version = get_package_version(package, PROVIDERS / crate)
-    cargo_add(package_version, cwd=UPSTREAM)
+    version = get_package_version(package, PROVIDERS / crate)
+    cargo_add(f"{package}@{version}", cwd=UPSTREAM)
     cargo_add("ctor", cwd=UPSTREAM)
 
 

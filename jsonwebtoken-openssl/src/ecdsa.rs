@@ -53,7 +53,7 @@ macro_rules! define_ecdsa_signer {
             fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, Error> {
                 let mut signer =
                     OpenSSLSigner::new($digest, &self.0).map_err(Error::from_source)?;
-                signer.sign_oneshot_to_vec(&msg).map_err(Error::from_source)
+                signer.sign_oneshot_to_vec(msg).map_err(Error::from_source)
             }
         }
 
@@ -108,6 +108,8 @@ macro_rules! define_ecdsa_verifier {
 }
 
 define_ecdsa_signer!(Es256Signer, Algorithm::ES256, MessageDigest::sha256());
+define_ecdsa_signer!(Es384Signer, Algorithm::ES384, MessageDigest::sha384());
+
 define_ecdsa_verifier!(
     Es256Verifier,
     Algorithm::ES256,
@@ -115,7 +117,6 @@ define_ecdsa_verifier!(
     MessageDigest::sha256()
 );
 
-define_ecdsa_signer!(Es384Signer, Algorithm::ES384, MessageDigest::sha384());
 define_ecdsa_verifier!(
     Es384Verifier,
     Algorithm::ES384,
