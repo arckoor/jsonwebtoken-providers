@@ -1,4 +1,4 @@
-//! A `CryptoProvider` for [jsonwebtoken], backed by [Botan](https://github.com/randombit/botan).
+//! A [CryptoProvider] for [jsonwebtoken], backed by [Botan](https://github.com/randombit/botan) (via [botan]).
 
 #![deny(missing_docs)]
 
@@ -56,15 +56,12 @@ fn new_verifier(algorithm: &Algorithm, key: &DecodingKey) -> Result<Box<dyn JwtV
 fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
     let privkey =
         Privkey::load_rsa_pkcs1(key_content).map_err(|e| ErrorKind::Provider(e.to_string()))?;
-    let pubkey = privkey
-        .pubkey()
-        .map_err(|e| ErrorKind::Provider(e.to_string()))?;
-    let n = pubkey
+    let n = privkey
         .get_field("n")
         .map_err(|e| ErrorKind::Provider(e.to_string()))?
         .to_bin()
         .map_err(|e| ErrorKind::Provider(e.to_string()))?;
-    let e = pubkey
+    let e = privkey
         .get_field("e")
         .map_err(|e| ErrorKind::Provider(e.to_string()))?
         .to_bin()
@@ -77,15 +74,12 @@ fn extract_ec_public_key_coordinates(
     alg: Algorithm,
 ) -> errors::Result<(EllipticCurve, Vec<u8>, Vec<u8>)> {
     let privkey = Privkey::load_der(key_content).map_err(|_| ErrorKind::InvalidEcdsaKey)?;
-    let pubkey = privkey
-        .pubkey()
-        .map_err(|e| ErrorKind::Provider(e.to_string()))?;
-    let x = pubkey
+    let x = privkey
         .get_field("public_x")
         .map_err(|e| ErrorKind::Provider(e.to_string()))?
         .to_bin()
         .map_err(|e| ErrorKind::Provider(e.to_string()))?;
-    let y = pubkey
+    let y = privkey
         .get_field("public_y")
         .map_err(|e| ErrorKind::Provider(e.to_string()))?
         .to_bin()
@@ -115,7 +109,7 @@ fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
         .expect("Finishing botan hash function must work")
 }
 
-/// A [Botan](https://github.com/randombit/botan) backed `CryptoProvider`.
+/// A [Botan](https://github.com/randombit/botan) backed [CryptoProvider].
 pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
     signer_factory: new_signer,
     verifier_factory: new_verifier,
@@ -126,7 +120,7 @@ pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
     },
 };
 
-/// Install the [Botan](https://github.com/randombit/botan) backed `CryptoProvider`.
+/// Install the [Botan](https://github.com/randombit/botan) backed [CryptoProvider].
 pub fn install_default() -> Result<(), &'static CryptoProvider> {
     DEFAULT_PROVIDER.install_default()
 }

@@ -42,7 +42,7 @@ jobs:
       - uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
-      - name: "Build and test jsonwebtoken-botan"
+      - name: Run provider tests
         run: ctest ${{ matrix.build-flags }}
         shell: "nix develop -c bash -e {0}"
 
@@ -54,24 +54,31 @@ jobs:
         include:
           - package: botan
             crate: jsonwebtoken-botan
+            skip-tests: ""
           - package: openssl
             crate: jsonwebtoken-openssl
+            skip-tests: "--skip dangerous_insecure_decode" # OpenSSL doesn't accept empty HMAC keys
     steps:
       - uses: actions/checkout@v5
         with:
           path: providers
-      - uses: actions/checkout@v5
-        with:
-          repository: Keats/jsonwebtoken
-          path: upstream
       - uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - run: |
           mv providers/flake.nix ./
           mv providers/flake.lock ./
+      - name: Find jsonwebtoken version
+        run: echo "rev=$(python3 providers/ci/find_version.py)" >> $GITHUB_OUTPUT
+        shell: "nix develop -c bash -e {0}"
+        id: version
+      - uses: actions/checkout@v5
+        with:
+          repository: Keats/jsonwebtoken
+          path: upstream
+          ref: v${{ steps.version.outputs.rev }}
       - run: python3 providers/ci/patch_upstream.py --package ${{ matrix.package }} --crate ${{ matrix.crate }}
         shell: "nix develop -c bash -e {0}"
-      - name: "Run upstream tests"
-        run: cd upstream && ctest
+      - name: Run upstream tests
+        run: cd upstream && ctest --no-fail-fast -- ${{matrix.skip-tests }}
         shell: "nix develop -c bash -e {0}"

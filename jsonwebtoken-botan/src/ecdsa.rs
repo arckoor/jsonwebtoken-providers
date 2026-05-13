@@ -86,7 +86,7 @@ macro_rules! define_ecdsa_verifier {
                     botan::Verifier::new(&self.0, $padding).map_err(Error::from_source)?;
                 verifier.update(msg).map_err(Error::from_source)?;
                 verifier
-                    .finish(&signature)
+                    .finish(signature)
                     .map_err(Error::from_source)?
                     .then_some(())
                     .ok_or(Error::new())
@@ -102,7 +102,7 @@ macro_rules! define_ecdsa_verifier {
 }
 
 define_ecdsa_signer!(Es256Signer, Algorithm::ES256, "SHA-256");
-define_ecdsa_verifier!(Es256Verifier, Algorithm::ES256, "SHA-256", "secp256r1");
-
 define_ecdsa_signer!(Es384Signer, Algorithm::ES384, "SHA-384");
+
+define_ecdsa_verifier!(Es256Verifier, Algorithm::ES256, "SHA-256", "secp256r1");
 define_ecdsa_verifier!(Es384Verifier, Algorithm::ES384, "SHA-384", "secp384r1");

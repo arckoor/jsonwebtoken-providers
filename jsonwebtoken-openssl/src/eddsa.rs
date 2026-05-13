@@ -29,7 +29,7 @@ impl Signer<Vec<u8>> for EdDSASigner {
     fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, Error> {
         let mut signer =
             OpenSSLSigner::new(MessageDigest::null(), &self.0).map_err(Error::from_source)?;
-        signer.sign_oneshot_to_vec(&msg).map_err(Error::from_source)
+        signer.sign_oneshot_to_vec(msg).map_err(Error::from_source)
     }
 }
 
@@ -48,7 +48,7 @@ impl EdDSAVerifier {
         }
 
         Ok(Self(
-            PKey::public_key_from_raw_bytes(&decoding_key.as_bytes(), Id::ED25519)
+            PKey::public_key_from_raw_bytes(decoding_key.as_bytes(), Id::ED25519)
                 .map_err(|_| ErrorKind::InvalidEddsaKey)?,
         ))
     }

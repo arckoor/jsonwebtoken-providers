@@ -31,7 +31,7 @@ macro_rules! define_hmac_signer {
             fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, Error> {
                 let mut signer =
                     OpenSSLSigner::new($digest, &self.0).map_err(Error::from_source)?;
-                signer.update(&msg).map_err(Error::from_source)?;
+                signer.update(msg).map_err(Error::from_source)?;
                 signer.sign_to_vec().map_err(Error::from_source)
             }
         }
@@ -64,9 +64,10 @@ macro_rules! define_hmac_verifier {
             fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), Error> {
                 let mut signer =
                     OpenSSLSigner::new($digest, &self.0).map_err(Error::from_source)?;
-                signer.update(&msg).map_err(Error::from_source)?;
                 memcmp::eq(
-                    &signer.sign_to_vec().map_err(Error::from_source)?,
+                    &signer
+                        .sign_oneshot_to_vec(msg)
+                        .map_err(Error::from_source)?,
                     signature,
                 )
                 .then_some(())
