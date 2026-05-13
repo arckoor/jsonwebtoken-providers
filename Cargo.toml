@@ -1,0 +1,8 @@
+[workspace]
+members = ["jsonwebtoken-botan", "jsonwebtoken-openssl", "provider-tests"]
+resolver = "3"
+
+[workspace.dependencies]
+jsonwebtoken = { version = "10.3.0", default-features = false }
+openssl = "0.10.79"
+botan = "0.13.0"

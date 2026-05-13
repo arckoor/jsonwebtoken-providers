@@ -1,0 +1,18 @@
+[package]
+name = "jsonwebtoken-botan"
+version = "1.0.0"
+license = "MIT"
+readme = "readme.md"
+description = "A Botan backed crypto provider for jsonwebtoken"
+homepage = "https://github.com/arckoor/jsonwebtoken-providers/tree/main/jsonwebtoken-botan"
+repository = "https://github.com/arckoor/jsonwebtoken-providers"
+keywords = ["jwt"]
+edition = "2024"
+
+[dependencies]
+jsonwebtoken = { workspace = true }
+botan = { workspace = true }
+
+[dev-dependencies]
+jsonwebtoken = "10.3.0"
+serde = "1.0.228"

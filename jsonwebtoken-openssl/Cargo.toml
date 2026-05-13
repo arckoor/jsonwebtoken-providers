@@ -1,0 +1,18 @@
+[package]
+name = "jsonwebtoken-openssl"
+version = "1.0.0"
+license = "MIT"
+readme = "readme.md"
+description = "An OpenSSL backed crypto provider for jsonwebtoken"
+homepage = "https://github.com/arckoor/jsonwebtoken-providers/tree/main/jsonwebtoken-openssl"
+repository = "https://github.com/arckoor/jsonwebtoken-providers"
+keywords = ["jwt"]
+edition = "2024"
+
+[dependencies]
+jsonwebtoken = { workspace = true }
+openssl = { workspace = true }
+
+[dev-dependencies]
+jsonwebtoken = "10.3.0"
+serde = "1.0.228"

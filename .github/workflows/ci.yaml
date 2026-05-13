@@ -1,0 +1,77 @@
+name: ci
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }} @ ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        command: ["fmt -- --check", "clippy -- -D warnings"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - run: cargo ${{ matrix.command }}
+        shell: "nix develop -c bash -e {0}"
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build-flags: ["", "--release"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Build and test jsonwebtoken-botan"
+        run: ctest ${{ matrix.build-flags }}
+        shell: "nix develop -c bash -e {0}"
+
+  upstream-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: botan
+            crate: jsonwebtoken-botan
+          - package: openssl
+            crate: jsonwebtoken-openssl
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: providers
+      - uses: actions/checkout@v5
+        with:
+          repository: Keats/jsonwebtoken
+          path: upstream
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
+          mv providers/flake.nix ./
+          mv providers/flake.lock ./
+      - run: python3 providers/ci/patch_upstream.py --package ${{ matrix.package }} --crate ${{ matrix.crate }}
+        shell: "nix develop -c bash -e {0}"
+      - name: "Run upstream tests"
+        run: cd upstream && ctest
+        shell: "nix develop -c bash -e {0}"

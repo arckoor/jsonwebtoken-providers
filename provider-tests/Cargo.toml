@@ -1,0 +1,13 @@
+[package]
+name = "provider-tests"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dev-dependencies]
+jsonwebtoken = { workspace = true, features = ["use_pem"] }
+jsonwebtoken-botan = { path = "../jsonwebtoken-botan" }
+jsonwebtoken-openssl = { path = "../jsonwebtoken-openssl" }
+botan = { workspace = true }
+openssl = { workspace = true }
+serde = "1.0.228"
