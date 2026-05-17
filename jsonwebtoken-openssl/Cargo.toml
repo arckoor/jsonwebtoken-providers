@@ -12,7 +12,3 @@ edition = "2024"
 [dependencies]
 jsonwebtoken = { workspace = true }
 openssl = { workspace = true }
-
-[dev-dependencies]
-jsonwebtoken = "10.3.0"
-serde = "1.0.228"

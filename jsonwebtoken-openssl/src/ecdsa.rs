@@ -7,19 +7,14 @@ use jsonwebtoken::{
 use openssl::{
     bn::BigNum,
     ec::{EcGroup, EcKey},
+    ecdsa::EcdsaSig,
     hash::MessageDigest,
     nid::Nid,
     pkey::{PKey, Private, Public},
     sign::{Signer as OpenSSLSigner, Verifier as OpenSSLVerifier},
 };
 
-fn extract_points(bytes: &[u8], curve: Nid) -> Result<(BigNum, BigNum)> {
-    let point_length = match curve {
-        Nid::X9_62_PRIME256V1 => 32,
-        Nid::SECP384R1 => 48,
-        _ => unreachable!(),
-    };
-
+fn extract_points(bytes: &[u8], point_length: usize) -> Result<(BigNum, BigNum)> {
     if bytes.len() != 1 + 2 * point_length || bytes[0] != 4 {
         return Err(ErrorKind::InvalidEcdsaKey.into());
     }
@@ -33,7 +28,7 @@ fn extract_points(bytes: &[u8], curve: Nid) -> Result<(BigNum, BigNum)> {
 }
 
 macro_rules! define_ecdsa_signer {
-    ($name:ident, $alg:expr, $digest:expr) => {
+    ($name:ident, $alg:expr, $point_length:expr, $digest:expr) => {
         pub struct $name(PKey<Private>);
 
         impl $name {
@@ -53,7 +48,22 @@ macro_rules! define_ecdsa_signer {
             fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, Error> {
                 let mut signer =
                     OpenSSLSigner::new($digest, &self.0).map_err(Error::from_source)?;
-                signer.sign_oneshot_to_vec(msg).map_err(Error::from_source)
+                let der = signer
+                    .sign_oneshot_to_vec(msg)
+                    .map_err(Error::from_source)?;
+
+                let sig = EcdsaSig::from_der(&der).map_err(Error::from_source)?;
+
+                let r = sig
+                    .r()
+                    .to_vec_padded($point_length)
+                    .map_err(Error::from_source)?;
+                let s = sig
+                    .s()
+                    .to_vec_padded($point_length)
+                    .map_err(Error::from_source)?;
+
+                Ok([r, s].concat())
             }
         }
 
@@ -66,7 +76,7 @@ macro_rules! define_ecdsa_signer {
 }
 
 macro_rules! define_ecdsa_verifier {
-    ($name:ident, $alg:expr, $nid:expr, $digest:expr) => {
+    ($name:ident, $alg:expr, $nid:expr, $point_length:expr, $digest:expr) => {
         pub struct $name(PKey<Public>);
 
         impl $name {
@@ -76,7 +86,7 @@ macro_rules! define_ecdsa_verifier {
                 }
 
                 let group = EcGroup::from_curve_name($nid).map_err(Error::from_source)?;
-                let (x_bytes, y_bytes) = extract_points(decoding_key.as_bytes(), $nid)?;
+                let (x_bytes, y_bytes) = extract_points(decoding_key.as_bytes(), $point_length)?;
                 Ok(Self(
                     PKey::from_ec_key(
                         EcKey::from_public_key_affine_coordinates(&group, &x_bytes, &y_bytes)
@@ -89,10 +99,24 @@ macro_rules! define_ecdsa_verifier {
 
         impl Verifier<Vec<u8>> for $name {
             fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), Error> {
+                if signature.len() != 2 * $point_length {
+                    return Err(Error::new());
+                }
+
+                let r =
+                    BigNum::from_slice(&signature[..$point_length]).map_err(Error::from_source)?;
+                let s =
+                    BigNum::from_slice(&signature[$point_length..]).map_err(Error::from_source)?;
+
+                let der = EcdsaSig::from_private_components(r, s)
+                    .map_err(Error::from_source)?
+                    .to_der()
+                    .map_err(Error::from_source)?;
+
                 let mut verifier =
                     OpenSSLVerifier::new($digest, &self.0).map_err(Error::from_source)?;
                 verifier
-                    .verify_oneshot(signature, msg)
+                    .verify_oneshot(&der, msg)
                     .map_err(Error::from_source)?
                     .then_some(())
                     .ok_or(Error::new())
@@ -107,13 +131,14 @@ macro_rules! define_ecdsa_verifier {
     };
 }
 
-define_ecdsa_signer!(Es256Signer, Algorithm::ES256, MessageDigest::sha256());
-define_ecdsa_signer!(Es384Signer, Algorithm::ES384, MessageDigest::sha384());
+define_ecdsa_signer!(Es256Signer, Algorithm::ES256, 32, MessageDigest::sha256());
+define_ecdsa_signer!(Es384Signer, Algorithm::ES384, 48, MessageDigest::sha384());
 
 define_ecdsa_verifier!(
     Es256Verifier,
     Algorithm::ES256,
     Nid::X9_62_PRIME256V1,
+    32,
     MessageDigest::sha256()
 );
 
@@ -121,5 +146,6 @@ define_ecdsa_verifier!(
     Es384Verifier,
     Algorithm::ES384,
     Nid::SECP384R1,
+    48,
     MessageDigest::sha384()
 );

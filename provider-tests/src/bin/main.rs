@@ -1,0 +1,61 @@
+use std::{fs, str::FromStr};
+
+use clap::Parser;
+use jsonwebtoken::{Algorithm, Header, encode};
+use provider_tests::{
+    ALGORITHMS, Claims, Provider, install_from_provider, keypair_from_file, token_path,
+};
+
+#[derive(Parser)]
+struct Args {
+    #[arg(short, long, value_enum)]
+    provider: Provider,
+}
+
+/// cargo run -- -p <rust-crypto | aws-lc-rs | botan | openssl>
+/// The only reason this is not generated at test run time is that it's impossible to uninstall
+/// a `CryptoProvider`, and we'd need to somehow install all of them in sequence
+fn main() {
+    let args = Args::parse();
+
+    install_from_provider(&args.provider);
+    generate_tokens(args.provider);
+}
+
+fn generate_tokens(provider: Provider) {
+    let hmac_key = keypair_from_file("hmac").0;
+    let rsa_key = keypair_from_file("rsa").0;
+    let ecdsa_key_256 = keypair_from_file("ecdsa_secp256r1").0;
+    let ecdsa_key_384 = keypair_from_file("ecdsa_secp384r1").0;
+    let eddsa_key = keypair_from_file("eddsa").0;
+
+    for algorithm in ALGORITHMS {
+        let token_path = token_path(&provider, algorithm);
+        if fs::exists(&token_path).unwrap() {
+            println!("Token for {} exists, skipping", algorithm);
+            continue;
+        }
+        println!("Generating token for {}", algorithm);
+        let algo = Algorithm::from_str(algorithm).unwrap();
+        let encoding_key = match algo {
+            Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => &hmac_key,
+            Algorithm::ES256 => &ecdsa_key_256,
+            Algorithm::ES384 => &ecdsa_key_384,
+            Algorithm::RS256
+            | Algorithm::RS384
+            | Algorithm::RS512
+            | Algorithm::PS256
+            | Algorithm::PS384
+            | Algorithm::PS512 => &rsa_key,
+            Algorithm::EdDSA => &eddsa_key,
+        };
+
+        let claims = Claims {
+            sub: "provider-tests".to_string(),
+            exp: u64::MAX,
+        };
+
+        let token = encode(&Header::new(algo), &claims, encoding_key).unwrap();
+        fs::write(token_path, token).unwrap();
+    }
+}
