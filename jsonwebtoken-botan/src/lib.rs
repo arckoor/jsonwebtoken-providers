@@ -1,4 +1,4 @@
-//! A [CryptoProvider] for [jsonwebtoken], backed by [Botan](https://github.com/randombit/botan) (via [botan]).
+//! A [`CryptoProvider`] for [jsonwebtoken], backed by [Botan](https://github.com/randombit/botan) (via [botan]).
 
 #![deny(missing_docs)]
 
@@ -109,7 +109,7 @@ fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
         .expect("Finishing botan hash function must work")
 }
 
-/// A [Botan](https://github.com/randombit/botan) backed [CryptoProvider].
+/// A [Botan](https://github.com/randombit/botan) backed [`CryptoProvider`].
 pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
     signer_factory: new_signer,
     verifier_factory: new_verifier,
@@ -120,7 +120,7 @@ pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
     },
 };
 
-/// Install the [Botan](https://github.com/randombit/botan) backed [CryptoProvider].
+/// Install the [Botan](https://github.com/randombit/botan) backed [`CryptoProvider`].
 pub fn install_default() -> Result<(), &'static CryptoProvider> {
     DEFAULT_PROVIDER.install_default()
 }

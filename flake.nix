@@ -29,6 +29,8 @@
 
         shellScripts = [
           (mkScript "ctest" "cargo nextest run --workspace \"$@\"")
+          (mkScript "gen-data" "clean-data && cargo run -- -k && cargo run -- -p aws-lc-rs && cargo run -- -p rust-crypto && cargo run -- -p openssl && cargo run -- -p botan")
+          (mkScript "clean-data" "rm -rf data")
         ];
       in {
         devShells.default = pkgs.mkShell {

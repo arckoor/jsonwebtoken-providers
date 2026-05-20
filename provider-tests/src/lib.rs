@@ -45,21 +45,15 @@ pub struct Claims {
 }
 
 pub fn keypair_from_file(name: &str) -> (EncodingKey, DecodingKey) {
+    let key = fs::read_to_string(key_path(name)).unwrap();
     if name == "hmac" {
-        let key = fs::read_to_string("data/keys/hmac.key")
-            .unwrap()
-            .split("")
-            .filter(|s| *s != "\n" && !s.is_empty())
-            .map(|s| s.parse::<u8>().unwrap())
-            .collect::<Vec<_>>();
         return (
-            EncodingKey::from_secret(&key),
-            DecodingKey::from_secret(&key),
+            EncodingKey::from_base64_secret(&key).unwrap(),
+            DecodingKey::from_base64_secret(&key).unwrap(),
         );
     }
 
-    let privkey =
-        Privkey::load_pem(&fs::read_to_string(format!("data/keys/{}.pem", name)).unwrap()).unwrap();
+    let privkey = Privkey::load_pem(&key).unwrap();
     let pubkey_pem = privkey.pubkey().unwrap().pem_encode().unwrap();
     let privkey_pem = privkey.pem_encode().unwrap();
     let pubkey = pubkey_pem.as_bytes();
@@ -100,6 +94,15 @@ pub fn install_from_provider(provider: &Provider) {
         Provider::Botan => {
             jsonwebtoken_botan::install_default().unwrap();
         }
+    }
+}
+
+pub fn key_path(name: &str) -> String {
+    fs::create_dir_all("data/keys").unwrap();
+    if name == "hmac" {
+        "data/keys/hmac.key".to_string()
+    } else {
+        format!("data/keys/{}.pem", name)
     }
 }
 

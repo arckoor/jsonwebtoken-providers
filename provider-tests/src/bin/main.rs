@@ -1,15 +1,18 @@
 use std::{fs, str::FromStr};
 
+use botan::{Privkey, RandomNumberGenerator};
 use clap::Parser;
 use jsonwebtoken::{Algorithm, Header, encode};
 use provider_tests::{
-    ALGORITHMS, Claims, Provider, install_from_provider, keypair_from_file, token_path,
+    ALGORITHMS, Claims, Provider, install_from_provider, key_path, keypair_from_file, token_path,
 };
 
 #[derive(Parser)]
 struct Args {
-    #[arg(short, long, value_enum)]
-    provider: Provider,
+    #[arg(short, long, value_enum, required_unless_present = "keys")]
+    provider: Option<Provider>,
+    #[arg(short, long)]
+    keys: bool,
 }
 
 /// cargo run -- -p <rust-crypto | aws-lc-rs | botan | openssl>
@@ -18,8 +21,36 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    install_from_provider(&args.provider);
-    generate_tokens(args.provider);
+    if args.keys {
+        install_from_provider(&Provider::Botan);
+        generate_keys();
+        return;
+    }
+
+    let provider = args.provider.unwrap();
+
+    install_from_provider(&provider);
+    generate_tokens(provider);
+}
+
+fn generate_keys() {
+    let mut rng = RandomNumberGenerator::new().unwrap();
+    let hmac = rng.read(32).unwrap();
+    let rsa = Privkey::create("RSA", "4096", &mut rng).unwrap();
+    let ecdsa_secp256r1 = Privkey::create("ECDSA", "secp256r1", &mut rng).unwrap();
+    let ecdsa_secp384r1 = Privkey::create("ECDSA", "secp384r1", &mut rng).unwrap();
+    let eddsa = Privkey::create("Ed25519", "", &mut rng).unwrap();
+
+    fs::write(key_path("hmac"), botan::base64_encode(&hmac).unwrap()).unwrap();
+
+    for (name, key) in [
+        ("rsa", rsa),
+        ("ecdsa_secp256r1", ecdsa_secp256r1),
+        ("ecdsa_secp384r1", ecdsa_secp384r1),
+        ("eddsa", eddsa),
+    ] {
+        fs::write(key_path(name), key.pem_encode().unwrap()).unwrap();
+    }
 }
 
 fn generate_tokens(provider: Provider) {

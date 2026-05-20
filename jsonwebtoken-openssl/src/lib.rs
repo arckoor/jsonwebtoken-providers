@@ -1,4 +1,4 @@
-//! A [CryptoProvider] for [jsonwebtoken], backed by [OpenSSL](https://github.com/openssl/openssl) (via [openssl]).
+//! A [`CryptoProvider`] for [jsonwebtoken], backed by [OpenSSL](https://github.com/openssl/openssl) (via [openssl]).
 
 #![deny(missing_docs)]
 
@@ -107,7 +107,7 @@ fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
         .to_vec()
 }
 
-/// An [OpenSSL](https://github.com/openssl/openssl) backed [CryptoProvider].
+/// An [OpenSSL](https://github.com/openssl/openssl) backed [`CryptoProvider`].
 pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
     signer_factory: new_signer,
     verifier_factory: new_verifier,
@@ -118,7 +118,7 @@ pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
     },
 };
 
-/// Install the [OpenSSL](https://github.com/openssl/openssl) backed [CryptoProvider].
+/// Install the [OpenSSL](https://github.com/openssl/openssl) backed [`CryptoProvider`].
 pub fn install_default() -> Result<(), &'static CryptoProvider> {
     DEFAULT_PROVIDER.install_default()
 }
