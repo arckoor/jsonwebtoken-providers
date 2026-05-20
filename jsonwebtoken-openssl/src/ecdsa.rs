@@ -20,8 +20,8 @@ fn extract_points(bytes: &[u8], point_length: usize) -> Result<(BigNum, BigNum)>
     }
 
     let x_bytes =
-        BigNum::from_slice(&bytes[1..point_length + 1]).map_err(|_| ErrorKind::InvalidEcdsaKey)?;
-    let y_bytes = BigNum::from_slice(&bytes[point_length + 1..point_length * 2 + 1])
+        BigNum::from_slice(&bytes[1..=point_length]).map_err(|_| ErrorKind::InvalidEcdsaKey)?;
+    let y_bytes = BigNum::from_slice(&bytes[(point_length + 1)..=(point_length * 2)])
         .map_err(|_| ErrorKind::InvalidEcdsaKey)?;
 
     Ok((x_bytes, y_bytes))

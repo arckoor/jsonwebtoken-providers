@@ -18,8 +18,8 @@ fn extract_points(bytes: &[u8], curve: &str) -> Result<(MPI, MPI)> {
     }
 
     let x_bytes =
-        MPI::new_from_bytes(&bytes[1..point_length + 1]).map_err(|_| ErrorKind::InvalidEcdsaKey)?;
-    let y_bytes = MPI::new_from_bytes(&bytes[point_length + 1..point_length * 2 + 1])
+        MPI::new_from_bytes(&bytes[1..=point_length]).map_err(|_| ErrorKind::InvalidEcdsaKey)?;
+    let y_bytes = MPI::new_from_bytes(&bytes[(point_length + 1)..=(point_length * 2)])
         .map_err(|_| ErrorKind::InvalidEcdsaKey)?;
 
     Ok((x_bytes, y_bytes))

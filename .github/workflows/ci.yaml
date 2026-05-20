@@ -42,6 +42,9 @@ jobs:
       - uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate test data
+        run: cd provider-tests && gen-data
+        shell: "nix develop -c bash -e {0}"
       - name: Run provider tests
         run: ctest ${{ matrix.build-flags }}
         shell: "nix develop -c bash -e {0}"
