@@ -36,7 +36,7 @@ macro_rules! define_ecdsa_signer {
                 }
 
                 Ok(Self(
-                    Privkey::load_der(encoding_key.inner())
+                    Privkey::load_der(encoding_key.as_bytes())
                         .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
                 ))
             }
@@ -71,7 +71,7 @@ macro_rules! define_ecdsa_verifier {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
 
-                let (x_bytes, y_bytes) = extract_points(decoding_key.as_bytes(), $curve)?;
+                let (x_bytes, y_bytes) = extract_points(decoding_key.try_get_as_bytes()?, $curve)?;
 
                 Ok(Self(
                     Pubkey::load_ecdsa(&x_bytes, &y_bytes, $curve)

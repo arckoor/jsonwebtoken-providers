@@ -22,7 +22,7 @@ macro_rules! define_hmac_signer {
                 }
 
                 Ok(Self(
-                    PKey::hmac(encoding_key.try_get_hmac_secret()?).map_err(Error::from_source)?,
+                    PKey::hmac(encoding_key.as_bytes()).map_err(Error::from_source)?,
                 ))
             }
         }
@@ -55,7 +55,7 @@ macro_rules! define_hmac_verifier {
                 }
 
                 Ok(Self(
-                    PKey::hmac(decoding_key.try_get_hmac_secret()?).map_err(Error::from_source)?,
+                    PKey::hmac(decoding_key.try_get_as_bytes()?).map_err(Error::from_source)?,
                 ))
             }
         }

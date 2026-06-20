@@ -17,8 +17,8 @@ macro_rules! define_rsa_signer {
                 }
 
                 Ok(Self(
-                    Privkey::load_rsa_pkcs1(encoding_key.inner())
-                        .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
+                    Privkey::load_rsa_pkcs1(encoding_key.as_bytes())
+                        .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?,
                 ))
             }
         }

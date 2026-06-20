@@ -2,10 +2,10 @@
 
 #![deny(missing_docs)]
 
-use botan::{HashFunction, Privkey};
+use botan::{HashFunction, Privkey, Pubkey};
 use jsonwebtoken::{
     Algorithm, DecodingKey, EncodingKey,
-    crypto::{CryptoProvider, JwkUtils, JwtSigner, JwtVerifier},
+    crypto::{CryptoProvider, JwtSigner, JwtVerifier, KeyUtils},
     errors::{self, Error, ErrorKind},
     jwk::{EllipticCurve, ThumbprintHash},
 };
@@ -29,6 +29,7 @@ fn new_signer(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dyn JwtSig
         Algorithm::PS384 => Box::new(rsa::RsaPss384Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::PS512 => Box::new(rsa::RsaPss512Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::EdDSA => Box::new(eddsa::EdDSASigner::new(key)?) as Box<dyn JwtSigner>,
+        _ => return Err(ErrorKind::UnsupportedAlgorithm.into()),
     };
 
     Ok(jwt_signer)
@@ -48,12 +49,13 @@ fn new_verifier(algorithm: &Algorithm, key: &DecodingKey) -> Result<Box<dyn JwtV
         Algorithm::PS384 => Box::new(rsa::RsaPss384Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::PS512 => Box::new(rsa::RsaPss512Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::EdDSA => Box::new(eddsa::EdDSAVerifier::new(key)?) as Box<dyn JwtVerifier>,
+        _ => return Err(ErrorKind::UnsupportedAlgorithm.into()),
     };
 
     Ok(jwt_verifier)
 }
 
-fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
+fn rsa_pub_components_from_private_key(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
     let privkey =
         Privkey::load_rsa_pkcs1(key_content).map_err(|e| ErrorKind::Provider(e.to_string()))?;
     let n = privkey
@@ -68,8 +70,23 @@ fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<
         .map_err(|e| ErrorKind::Provider(e.to_string()))?;
     Ok((n, e))
 }
+fn rsa_pub_components_from_public_key(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
+    let pubkey =
+        Pubkey::load_rsa_pkcs1(key_content).map_err(|e| ErrorKind::Provider(e.to_string()))?;
+    let n = pubkey
+        .get_field("n")
+        .map_err(|e| ErrorKind::Provider(e.to_string()))?
+        .to_bin()
+        .map_err(|e| ErrorKind::Provider(e.to_string()))?;
+    let e = pubkey
+        .get_field("e")
+        .map_err(|e| ErrorKind::Provider(e.to_string()))?
+        .to_bin()
+        .map_err(|e| ErrorKind::Provider(e.to_string()))?;
+    Ok((n, e))
+}
 
-fn extract_ec_public_key_coordinates(
+fn ec_pub_components_from_private_key(
     key_content: &[u8],
     alg: Algorithm,
 ) -> errors::Result<(EllipticCurve, Vec<u8>, Vec<u8>)> {
@@ -92,30 +109,52 @@ fn extract_ec_public_key_coordinates(
     }
 }
 
-fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
+fn ed_pub_components_from_private_key(
+    key_content: &[u8],
+    curve_type: &EllipticCurve,
+) -> errors::Result<Vec<u8>> {
+    match curve_type {
+        EllipticCurve::Ed25519 => {
+            let private_key =
+                Privkey::load_der(key_content).map_err(|_| ErrorKind::InvalidEddsaKey)?;
+            Ok(private_key
+                .pubkey()
+                .map_err(|e| ErrorKind::Provider(e.to_string()))?
+                .raw_bytes()
+                .map_err(|e| ErrorKind::Provider(e.to_string()))?)
+        }
+
+        _ => Err(ErrorKind::InvalidAlgorithm.into()),
+    }
+}
+
+fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> errors::Result<Vec<u8>> {
     let algo = match hash_function {
         ThumbprintHash::SHA256 => "SHA-256",
         ThumbprintHash::SHA384 => "SHA-384",
         ThumbprintHash::SHA512 => "SHA-512",
+        _ => return Err(ErrorKind::UnsupportedAlgorithm.into()),
     };
 
     let mut hash_function =
-        HashFunction::new(algo).expect("Constructing botan hash function must work");
+        HashFunction::new(algo).map_err(|e| ErrorKind::Provider(e.to_string()))?;
     hash_function
         .update(data)
-        .expect("Updating botan hash function must work");
-    hash_function
+        .map_err(|e| ErrorKind::Provider(e.to_string()))?;
+    Ok(hash_function
         .finish()
-        .expect("Finishing botan hash function must work")
+        .map_err(|e| ErrorKind::Provider(e.to_string()))?)
 }
 
 /// A [Botan](https://github.com/randombit/botan) backed [`CryptoProvider`].
 pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
     signer_factory: new_signer,
     verifier_factory: new_verifier,
-    jwk_utils: JwkUtils {
-        extract_rsa_public_key_components,
-        extract_ec_public_key_coordinates,
+    key_utils: KeyUtils {
+        rsa_pub_components_from_private_key,
+        rsa_pub_components_from_public_key,
+        ec_pub_components_from_private_key,
+        ed_pub_components_from_private_key,
         compute_digest,
     },
 };

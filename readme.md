@@ -1,6 +1,6 @@
 # jsonwebtoken-providers
 
-Some `CryptoProviders` for [jsonwebtoken](https://github.com/Keats/jsonwebtoken).
+Some `CryptoProvider`s for [jsonwebtoken](https://github.com/Keats/jsonwebtoken).
 
 ## Development
 
