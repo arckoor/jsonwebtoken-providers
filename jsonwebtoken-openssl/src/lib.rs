@@ -4,7 +4,7 @@
 
 use jsonwebtoken::{
     Algorithm, DecodingKey, EncodingKey,
-    crypto::{CryptoProvider, JwkUtils, JwtSigner, JwtVerifier},
+    crypto::{CryptoProvider, JwtSigner, JwtVerifier, KeyUtils},
     errors::{self, Error, ErrorKind},
     jwk::{EllipticCurve, ThumbprintHash},
 };
@@ -34,6 +34,7 @@ fn new_signer(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dyn JwtSig
         Algorithm::PS384 => Box::new(rsa::RsaPss384Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::PS512 => Box::new(rsa::RsaPss512Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::EdDSA => Box::new(eddsa::EdDSASigner::new(key)?) as Box<dyn JwtSigner>,
+        _ => return Err(ErrorKind::UnsupportedAlgorithm.into()),
     };
     Ok(jwt_signer)
 }
@@ -52,18 +53,25 @@ fn new_verifier(algorithm: &Algorithm, key: &DecodingKey) -> Result<Box<dyn JwtV
         Algorithm::PS384 => Box::new(rsa::RsaPss384Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::PS512 => Box::new(rsa::RsaPss512Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::EdDSA => Box::new(eddsa::EdDSAVerifier::new(key)?) as Box<dyn JwtVerifier>,
+        _ => return Err(ErrorKind::UnsupportedAlgorithm.into()),
     };
 
     Ok(jwt_verifier)
 }
 
-fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
+fn rsa_pub_components_from_private_key(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
     let key =
         Rsa::private_key_from_der(key_content).map_err(|e| ErrorKind::Provider(e.to_string()))?;
     Ok((key.n().to_vec(), key.e().to_vec()))
 }
 
-fn extract_ec_public_key_coordinates(
+fn rsa_pub_components_from_public_key(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
+    let key = Rsa::public_key_from_der_pkcs1(key_content)
+        .map_err(|e| ErrorKind::Provider(e.to_string()))?;
+    Ok((key.n().to_vec(), key.e().to_vec()))
+}
+
+fn ec_pub_components_from_private_key(
     key_content: &[u8],
     alg: Algorithm,
 ) -> errors::Result<(EllipticCurve, Vec<u8>, Vec<u8>)> {
@@ -96,24 +104,47 @@ fn extract_ec_public_key_coordinates(
     }
 }
 
-fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
+fn ed_pub_components_from_private_key(
+    key_content: &[u8],
+    curve_type: &EllipticCurve,
+) -> errors::Result<Vec<u8>> {
+    match curve_type {
+        EllipticCurve::Ed25519 => {
+            let pkey =
+                PKey::private_key_from_der(key_content).map_err(|_| ErrorKind::InvalidEddsaKey)?;
+
+            let public_key = pkey
+                .raw_public_key()
+                .map_err(|_| ErrorKind::InvalidEddsaKey)?;
+
+            Ok(public_key)
+        }
+
+        _ => Err(ErrorKind::InvalidAlgorithm.into()),
+    }
+}
+
+fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> errors::Result<Vec<u8>> {
     let digest = match hash_function {
         ThumbprintHash::SHA256 => MessageDigest::sha256(),
         ThumbprintHash::SHA384 => MessageDigest::sha384(),
         ThumbprintHash::SHA512 => MessageDigest::sha512(),
+        _ => return Err(ErrorKind::UnsupportedAlgorithm.into()),
     };
-    hash(digest, data)
-        .expect("OpenSSL hash function must work")
-        .to_vec()
+    Ok(hash(digest, data)
+        .map_err(|e| ErrorKind::Provider(e.to_string()))?
+        .to_vec())
 }
 
 /// An [OpenSSL](https://github.com/openssl/openssl) backed [`CryptoProvider`].
 pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
     signer_factory: new_signer,
     verifier_factory: new_verifier,
-    jwk_utils: JwkUtils {
-        extract_rsa_public_key_components,
-        extract_ec_public_key_coordinates,
+    key_utils: KeyUtils {
+        rsa_pub_components_from_private_key,
+        rsa_pub_components_from_public_key,
+        ec_pub_components_from_private_key,
+        ed_pub_components_from_private_key,
         compute_digest,
     },
 };

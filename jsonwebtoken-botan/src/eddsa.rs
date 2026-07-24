@@ -15,7 +15,7 @@ impl EdDSASigner {
         }
 
         Ok(Self(
-            Privkey::load_der(encoding_key.inner()).map_err(|_| ErrorKind::InvalidEddsaKey)?,
+            Privkey::load_der(encoding_key.as_bytes()).map_err(|_| ErrorKind::InvalidEddsaKey)?,
         ))
     }
 }
@@ -44,7 +44,7 @@ impl EdDSAVerifier {
         }
 
         Ok(Self(
-            Pubkey::load_ed25519(decoding_key.as_bytes())
+            Pubkey::load_ed25519(decoding_key.try_get_as_bytes()?)
                 .map_err(|_| ErrorKind::InvalidEddsaKey)?,
         ))
     }

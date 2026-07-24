@@ -23,7 +23,7 @@ macro_rules! define_rsa_signer {
                 }
 
                 Ok(Self(
-                    PKey::private_key_from_der(encoding_key.inner())
+                    PKey::private_key_from_der(encoding_key.as_bytes())
                         .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?,
                 ))
             }

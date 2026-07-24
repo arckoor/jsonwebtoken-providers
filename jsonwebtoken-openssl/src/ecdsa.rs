@@ -38,7 +38,7 @@ macro_rules! define_ecdsa_signer {
                 }
 
                 Ok(Self(
-                    PKey::private_key_from_der(encoding_key.inner())
+                    PKey::private_key_from_der(encoding_key.as_bytes())
                         .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
                 ))
             }
@@ -86,7 +86,8 @@ macro_rules! define_ecdsa_verifier {
                 }
 
                 let group = EcGroup::from_curve_name($nid).map_err(Error::from_source)?;
-                let (x_bytes, y_bytes) = extract_points(decoding_key.as_bytes(), $point_length)?;
+                let (x_bytes, y_bytes) =
+                    extract_points(decoding_key.try_get_as_bytes()?, $point_length)?;
                 Ok(Self(
                     PKey::from_ec_key(
                         EcKey::from_public_key_affine_coordinates(&group, &x_bytes, &y_bytes)

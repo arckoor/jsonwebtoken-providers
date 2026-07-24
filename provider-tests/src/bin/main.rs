@@ -79,6 +79,10 @@ fn generate_tokens(provider: Provider) {
             | Algorithm::PS384
             | Algorithm::PS512 => &rsa_key,
             Algorithm::EdDSA => &eddsa_key,
+            _ => {
+                println!("No key generation defined for {algo:?}");
+                continue;
+            }
         };
 
         let claims = Claims {

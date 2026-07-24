@@ -16,7 +16,7 @@ macro_rules! define_hmac_signer {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
 
-                Ok(Self(encoding_key.try_get_hmac_secret()?.to_vec()))
+                Ok(Self(encoding_key.as_bytes().to_vec()))
             }
         }
 
@@ -47,7 +47,7 @@ macro_rules! define_hmac_verifier {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
 
-                Ok(Self(decoding_key.try_get_hmac_secret()?.to_vec()))
+                Ok(Self(decoding_key.try_get_as_bytes()?.to_vec()))
             }
         }
 

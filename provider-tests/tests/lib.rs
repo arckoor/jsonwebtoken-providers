@@ -162,6 +162,10 @@ fn verify_all_algorithms() {
                 | Algorithm::PS384
                 | Algorithm::PS512 => &rsa_key,
                 Algorithm::EdDSA => &eddsa_key,
+                _ => {
+                    println!("No test configured for algo {algo:?}");
+                    continue;
+                }
             };
             assert!(decode::<Claims>(token, decoding_key, &Validation::new(algo)).is_ok());
         }
