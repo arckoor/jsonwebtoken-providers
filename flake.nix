@@ -50,7 +50,7 @@
             ++ shellScripts;
 
           RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
-          BOTAN_INCLUDE_DIR = "${pkgs.botan3.dev}/include/botan-3";
+          BOTAN_INCLUDE_DIR = "${pkgs.botan3.dev}/include";
           OPENSSL_LIB_DIR = "${pkgs.openssl.out}/lib";
           OPENSSL_INCLUDE_DIR = "${pkgs.openssl.dev}/include";
         };
