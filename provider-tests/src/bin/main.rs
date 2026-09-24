@@ -62,11 +62,7 @@ fn generate_tokens(provider: Provider) {
 
     for algorithm in ALGORITHMS {
         let token_path = token_path(&provider, algorithm);
-        if fs::exists(&token_path).unwrap() {
-            println!("Token for {} exists, skipping", algorithm);
-            continue;
-        }
-        println!("Generating token for {}", algorithm);
+        println!("{provider}: Generating token for {}", algorithm);
         let algo = Algorithm::from_str(algorithm).unwrap();
         let encoding_key = match algo {
             Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => &hmac_key,
