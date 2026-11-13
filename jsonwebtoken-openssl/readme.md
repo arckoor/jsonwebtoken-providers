@@ -9,3 +9,4 @@ Use the following table to select the correct version:
 |:----:|:---:|
 | 10.x | 1.x |
 | 11.x | 2.x |
+| 12.x | 3.x |
