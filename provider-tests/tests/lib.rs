@@ -20,8 +20,8 @@ fn generate_keys_botan(algorithm: Algorithm) -> (EncodingKey, DecodingKey) {
         AlgorithmFamily::Hmac => {
             let secret = rng.read(64).unwrap();
             (
-                EncodingKey::from_secret(&secret),
-                DecodingKey::from_secret(&secret),
+                EncodingKey::from_secret(&secret).unwrap(),
+                DecodingKey::from_secret(&secret).unwrap(),
             )
         }
         _ => {
@@ -66,8 +66,8 @@ fn generate_keys_openssl(algorithm: Algorithm) -> (EncodingKey, DecodingKey) {
             let mut secret = [0; 64];
             rand_bytes(&mut secret).unwrap();
             (
-                EncodingKey::from_secret(&secret),
-                DecodingKey::from_secret(&secret),
+                EncodingKey::from_secret(&secret).unwrap(),
+                DecodingKey::from_secret(&secret).unwrap(),
             )
         }
         _ => {
@@ -230,7 +230,7 @@ fn test_no_default_provider() {
         exp,
     };
 
-    let encoding_key = EncodingKey::from_secret(b"secret");
+    let encoding_key = EncodingKey::from_secret(b"secret").unwrap();
 
     let _ = encode(&Header::new(Algorithm::HS256), &claims, &encoding_key);
 }

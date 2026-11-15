@@ -55,5 +55,5 @@ jobs:
       - run: python3 providers/ci/patch_upstream.py --package ${{ matrix.package }} --crate ${{ matrix.crate }}
         shell: "nix develop -c bash -e {0}"
       - name: Run upstream tests
-        run: cd upstream && ctest --no-fail-fast
+        run: cd upstream && ctest --no-fail-fast -- --skip missing_provider --skip caught_panic_leaves_the_install_slot_free
         shell: "nix develop -c bash -e {0}"

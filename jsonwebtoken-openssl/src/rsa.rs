@@ -9,7 +9,7 @@ use openssl::{
     hash::MessageDigest,
     pkey::{PKey, Private, Public},
     rsa::{Padding, Rsa},
-    sign::{Signer as OpenSSLSigner, Verifier as OpenSSLVerifier},
+    sign::{RsaPssSaltlen, Signer as OpenSSLSigner, Verifier as OpenSSLVerifier},
 };
 
 macro_rules! define_rsa_signer {
@@ -36,6 +36,14 @@ macro_rules! define_rsa_signer {
                 signer
                     .set_rsa_padding($padding)
                     .map_err(Error::from_source)?;
+                if $padding == Padding::PKCS1_PSS {
+                    signer
+                        .set_rsa_mgf1_md($digest)
+                        .map_err(Error::from_source)?;
+                    signer
+                        .set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)
+                        .map_err(Error::from_source)?;
+                }
                 signer.sign_oneshot_to_vec(&msg).map_err(Error::from_source)
             }
         }
@@ -84,6 +92,14 @@ macro_rules! define_rsa_verifier {
                 verifier
                     .set_rsa_padding($padding)
                     .map_err(Error::from_source)?;
+                if $padding == Padding::PKCS1_PSS {
+                    verifier
+                        .set_rsa_mgf1_md($digest)
+                        .map_err(Error::from_source)?;
+                    verifier
+                        .set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)
+                        .map_err(Error::from_source)?;
+                }
                 verifier
                     .verify_oneshot(signature, msg)
                     .map_err(Error::from_source)?
