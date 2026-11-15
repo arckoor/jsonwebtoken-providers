@@ -2,15 +2,8 @@
 
 Some `CryptoProvider`s for [jsonwebtoken](https://github.com/Keats/jsonwebtoken).
 
-|ci_status| |nightly_ci_status|
-
-.. |ci_status| image:: https://github.com/arckoor/jsonwebtoken-providers/actions/workflows/ci.yaml/badge.svg?branch=main
-:target: https://github.com/arckoor/jsonwebtoken-providers/actions/workflows/ci.yaml
-:alt: ci status
-
-.. |nightly_ci_status| image:: https://github.com/arckoor/jsonwebtoken-providers/actions/workflows/nightly.yaml/badge.svg?branch=main
-:target: https://github.com/arckoor/jsonwebtoken-providers/actions/workflows/nightly.yaml
-:alt: nightly ci status
+[![CI](https://github.com/arckoor/jsonwebtoken-providers/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/arckoor/jsonwebtoken-providers/actions/workflows/ci.yaml)
+[![Nightly CI](https://github.com/arckoor/jsonwebtoken-providers/actions/workflows/nightly.yaml/badge.svg?branch=main)](https://github.com/arckoor/jsonwebtoken-providers/actions/workflows/nightly.yaml)
 
 ## Development
 
